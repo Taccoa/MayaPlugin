@@ -1,6 +1,9 @@
 #include "maya_includes.h"
 #include <iostream>
 
+//http://help.autodesk.com/view/MAYAUL/2016/ENU/?guid=__cpp_ref_node_created_c_b_cmd_2node_created_c_b_cmd_8h_example_html
+//http://help.autodesk.com/view/MAYAUL/2016/ENU/?guid=__cpp_ref_node_created_c_b_cmd_2node_created_c_b_cmd_8cpp_example_html
+
 using namespace std;
 
 // called when the plugin is loaded
@@ -19,7 +22,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 	// otherwise is has not.
 	return res;
 }
-
 
 EXPORT MStatus uninitializePlugin(MObject obj)
 {
