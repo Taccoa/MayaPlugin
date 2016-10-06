@@ -54,7 +54,7 @@ EXPORT MStatus initializePlugin(MObject obj)
 	if(r==MS::kFailure)
 		MGlobal::displayInfo("# Node Add Failed #");
 
-	NCCId = MNodeMessage::addNameChangedCallback(obj, onNameChanged, NULL, &r);
+	NCCId = MNodeMessage::addNameChangedCallback(MObject::kNullObj, onNameChanged, NULL, &r);
 
 	if (r == MS::kFailure)
 		MGlobal::displayInfo("# Name Changed Failed #");
