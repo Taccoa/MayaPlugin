@@ -182,3 +182,8 @@ orleans.codegen.cs
 
 __pycache__/
 *.pyc
+*.pdb
+*.ilk
+*.pdb
+*.obj
+Assigment.2.MayaPlugin/x64/Debug/Assigmen.F8D613F7.tlog/Assigment.2.MayaPlugin.write.1u.tlog
