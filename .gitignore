@@ -47,3 +47,5 @@ Temporary Items
 .apdisk
 Assigment.2.MayaPlugin.VC.VC.opendb
 Assigment.2.MayaPlugin.VC.db
+*.db
+.vs/Assigment.2.MayaPlugin/v14/.suo
