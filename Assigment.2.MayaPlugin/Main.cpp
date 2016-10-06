@@ -15,7 +15,7 @@ void onNodeCreated(MObject& node, void* clientData)
 		MFnDependencyNode dn(node);
 		nodeName = dn.name();
 	}
-	MString string = "# Node Created " + nodeName + " #";
+	MString string = "# A Node has been Created named " + nodeName + " #";
 	MGlobal::displayInfo(string);
 }
 
@@ -32,7 +32,7 @@ void onNameChanged(MObject &node, const MString &str, void *clientData)
 		newName = node.name();
 	}
 
-	MString string = "# Name Changed on Node from " + str + " to " + newName + " #";
+	MString string = "# A Node has Changed Name from " + str + " to " + newName + " #";
 	MGlobal::displayInfo(string);
 }
 
