@@ -27,12 +27,10 @@
 #include <maya/MFnPointLight.h>
 #include <maya/MSelectionList.h>
 #include <maya/MItDependencyNodes.h>
-
-// Wrappers
+#include <maya/MSyntax.h>
+#include <maya/MArgDatabase.h>
 #include <maya/MGlobal.h>
 #include <maya/MCallbackIdArray.h>
-
-// Messages
 #include <maya/MMessage.h>
 #include <maya/MTimerMessage.h>
 #include <maya/MDGMessage.h>
@@ -43,8 +41,6 @@
 #include <maya/MDagMessage.h>
 #include <maya/MUiMessage.h>
 #include <maya/MModelMessage.h>
-
-// Commands
 #include <maya/MPxCommand.h>
 
 // Libraries to link from Maya
