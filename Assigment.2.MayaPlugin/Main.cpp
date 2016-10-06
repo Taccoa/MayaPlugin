@@ -2,7 +2,7 @@
 #include <iostream>
 
 using namespace std;
-MCallbackId sId;
+MCallbackId NACId, NCCId;
 
 void onNodeCreated(MObject& node, void* clientData)
 {
@@ -19,6 +19,23 @@ void onNodeCreated(MObject& node, void* clientData)
 	MGlobal::displayInfo(string);
 }
 
+void onNameChanged(MObject &node, const MString &str, void *clientData)
+{
+	MString newName;
+
+	if (node.hasFn(MFn::kDagNode)) {
+		MFnDagNode dagNode(node);
+		newName = dagNode.fullPathName();
+	}
+	else {
+		MFnDependencyNode node(node);
+		newName = node.name();
+	}
+
+	MString string = "# Name Changed on Node from " + str + " to " + newName + " #";
+	MGlobal::displayInfo(string);
+}
+
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MStatus res = MS::kSuccess;
@@ -30,7 +47,17 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	MGlobal::displayInfo("Maya plugin loaded!");
 
-	sId = MDGMessage::addNodeAddedCallback(onNodeCreated, "dependNode", NULL, &res);
+	MStatus r = MS::kSuccess;
+
+	NACId = MDGMessage::addNodeAddedCallback(onNodeCreated, "dependNode", NULL, &r);
+
+	if(r==MS::kFailure)
+		MGlobal::displayInfo("# Node Add Failed #");
+
+	NCCId = MNodeMessage::addNameChangedCallback(obj, onNameChanged, NULL, &r);
+
+	if (r == MS::kFailure)
+		MGlobal::displayInfo("# Name Changed Failed #");
 	
 	return res;
 }
@@ -41,7 +68,8 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 
 	MGlobal::displayInfo("Maya plugin unloaded!");
 
-	MDGMessage::removeCallback(sId);
+	MDGMessage::removeCallback(NACId);
+	MDGMessage::removeCallback(NCCId);
 
 	return MS::kSuccess;
 }
