@@ -27,7 +27,7 @@ void onNameChanged(MObject &node, const MString &str, void *clientData)
 		MFnDagNode dagNode(node);
 		newName = dagNode.fullPathName();
 	}
-	else {
+	else if (node.hasFn(MFn::kDependencyNode)) {
 		MFnDependencyNode node(node);
 		newName = node.name();
 	}
