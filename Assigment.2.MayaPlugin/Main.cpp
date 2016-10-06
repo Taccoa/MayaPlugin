@@ -49,6 +49,8 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	MStatus r = MS::kSuccess;
 
+
+
 	NACId = MDGMessage::addNodeAddedCallback(onNodeCreated, "dependNode", NULL, &r);
 
 	if(r==MS::kFailure)
