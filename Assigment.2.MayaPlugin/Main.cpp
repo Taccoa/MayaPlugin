@@ -36,11 +36,11 @@ void onNameChanged(MObject &node, const MString &str, void *clientData)
 	MGlobal::displayInfo(string);
 }
 
-//void onTransformationNodeChanged(MObject &transformNode, MDagMessage::MatrixModifiedFlags &modified, void *clientData)
-//{
-//	MString string = "# She Moves Her Own Way #";
-//	MGlobal::displayInfo(string);
-//}
+void onTransformationNodeChanged(MObject &transformNode, MDagMessage::MatrixModifiedFlags &modified, void *clientData)
+{
+	MString string = "# She Moves Her Own Way #";
+	MGlobal::displayInfo(string);
+}
 
 EXPORT MStatus initializePlugin(MObject obj)
 {
@@ -65,16 +65,25 @@ EXPORT MStatus initializePlugin(MObject obj)
 	if (r == MS::kFailure)
 		MGlobal::displayInfo("# Name Changed Failed #");
 
-	if (obj.hasFn(MFn::kTransform))
+	MDagPath dagPath;
+	MStatus status;
+	MStatus re;
+
+	if (!obj.isNull())
 	{
+		status = MDagPath::getAPathTo(obj, dagPath);
+		if (status.error())
+		{
+			MGlobal::displayInfo("# DagPath SNAFU #");
+		}
+		else
+		{
+			WMMCId = MDagMessage::addWorldMatrixModifiedCallback(dagPath, onTransformationNodeChanged, NULL, &r);
 
+			if (r == MS::kFailure)
+				MGlobal::displayInfo("# Transformation Changed Failed #");
+		}
 	}
-
-	//MDagPath dagPath;
-	//WMMCId = MDagMessage::addWorldMatrixModifiedCallback(dagPath, onTransformationNodeChanged, NULL, &r);
-
-	//if (r == MS::kFailure)
-	//	MGlobal::displayInfo("# Transformation Changed Failed #");
 	
 	return res;
 }
@@ -86,7 +95,8 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 	MGlobal::displayInfo("Maya plugin unloaded!");
 
 	MDGMessage::removeCallback(NACId);
-	MDGMessage::removeCallback(NCCId);
+	MNodeMessage::removeCallback(NCCId);
+	MDagMessage::removeCallback(WMMCId);
 
 	return MS::kSuccess;
 }
