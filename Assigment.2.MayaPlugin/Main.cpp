@@ -2,7 +2,7 @@
 #include <iostream>
 
 using namespace std;
-MCallbackId NACId, NCCId;
+MCallbackId NACId, NCCId, WMMCId;
 
 void onNodeCreated(MObject& node, void* clientData)
 {
@@ -36,6 +36,12 @@ void onNameChanged(MObject &node, const MString &str, void *clientData)
 	MGlobal::displayInfo(string);
 }
 
+//void onTransformationNodeChanged(MObject &transformNode, MDagMessage::MatrixModifiedFlags &modified, void *clientData)
+//{
+//	MString string = "# She Moves Her Own Way #";
+//	MGlobal::displayInfo(string);
+//}
+
 EXPORT MStatus initializePlugin(MObject obj)
 {
 	MStatus res = MS::kSuccess;
@@ -58,6 +64,17 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	if (r == MS::kFailure)
 		MGlobal::displayInfo("# Name Changed Failed #");
+
+	if (obj.hasFn(MFn::kTransform))
+	{
+
+	}
+
+	//MDagPath dagPath;
+	//WMMCId = MDagMessage::addWorldMatrixModifiedCallback(dagPath, onTransformationNodeChanged, NULL, &r);
+
+	//if (r == MS::kFailure)
+	//	MGlobal::displayInfo("# Transformation Changed Failed #");
 	
 	return res;
 }
