@@ -67,7 +67,6 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	MDagPath dagPath;
 	MStatus status;
-	MStatus re;
 
 	if (!obj.isNull())
 	{
