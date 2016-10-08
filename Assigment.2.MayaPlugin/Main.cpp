@@ -2,44 +2,53 @@
 #include <iostream>
 
 using namespace std;
-MCallbackId NACId, NCCId, WMMCId;
+MCallbackId NACId, NCCId, ACCId, TCId;
 
 void onNodeCreated(MObject& node, void* clientData)
 {
 	MString nodeName;
-	if (node.hasFn(MFn::kDagNode)) {
-		MFnDagNode dagObj(node);
-		nodeName = dagObj.fullPathName();
+	MString string;
+	if (node.hasFn(MFn::kTransform)) {
+		MFnTransform trans(node);
+		nodeName = trans.name();
+		string = "# A Node has been Created named " + nodeName + " #";
 	}
 	else {
-		MFnDependencyNode dn(node);
-		nodeName = dn.name();
+		MFnMesh mesh(node);
+		nodeName = mesh.name();
+		string = "# A Node has been Created named " + nodeName + " #";
 	}
-	MString string = "# A Node has been Created named " + nodeName + " #";
 	MGlobal::displayInfo(string);
 }
 
 void onNameChanged(MObject &node, const MString &str, void *clientData)
 {
 	MString newName;
-
-	if (node.hasFn(MFn::kDagNode)) {
-		MFnDagNode dagNode(node);
-		newName = dagNode.fullPathName();
+	MString string;
+	if (node.hasFn(MFn::kTransform)) {
+		MFnTransform trans(node);
+		newName = trans.name();
+		string = "# A Node has Changed Name from " + str + " to " + newName + " #";
 	}
-	else if (node.hasFn(MFn::kDependencyNode)) {
-		MFnDependencyNode node(node);
-		newName = node.name();
+	if (node.hasFn(MFn::kMesh)) {
+		MFnMesh mesh(node);
+		newName = mesh.name();
+		string = "# A Node has Changed Name from " + str + " to " + newName + " #";
 	}
-
-	MString string = "# A Node has Changed Name from " + str + " to " + newName + " #";
 	MGlobal::displayInfo(string);
 }
 
-void onTransformationNodeChanged(MObject &transformNode, MDagMessage::MatrixModifiedFlags &modified, void *clientData)
+void onTransformationNodeChanged(MNodeMessage::AttributeMessage msg, MPlug &plug1, MPlug &plug2, void *clientData)
 {
-	MString string = "# She Moves Her Own Way #";
+	MString string = "# " + plug1.name() + " Transformation has Changed #";
 	MGlobal::displayInfo(string);
+}
+
+void onTimeChanged(float elapsedTime, float lastTime, void *clientData)
+{
+	MString string = "# Time : ";
+	MString string2 = " #";
+	MGlobal::displayInfo(string + elapsedTime + string2);
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
@@ -58,31 +67,23 @@ EXPORT MStatus initializePlugin(MObject obj)
 	NACId = MDGMessage::addNodeAddedCallback(onNodeCreated, "dependNode", NULL, &r);
 
 	if(r==MS::kFailure)
-		MGlobal::displayInfo("# Node Add Failed #");
+		MGlobal::displayInfo("# Node Added Callback Failed #");
 
 	NCCId = MNodeMessage::addNameChangedCallback(MObject::kNullObj, onNameChanged, NULL, &r);
 
 	if (r == MS::kFailure)
-		MGlobal::displayInfo("# Name Changed Failed #");
+		MGlobal::displayInfo("# Name Changed Callback Failed #");
 
-	MDagPath dagPath;
-	MStatus status;
+	ACCId = MNodeMessage::addAttributeChangedCallback(obj, onTransformationNodeChanged, NULL, &r);
 
-	if (!obj.isNull())
-	{
-		status = MDagPath::getAPathTo(obj, dagPath);
-		if (status.error())
-		{
-			MGlobal::displayInfo("# DagPath SNAFU #");
-		}
-		else
-		{
-			WMMCId = MDagMessage::addWorldMatrixModifiedCallback(dagPath, onTransformationNodeChanged, NULL, &r);
+	if (r == MS::kFailure)
+		MGlobal::displayInfo("# Transformation Changed Failed #");
 
-			if (r == MS::kFailure)
-				MGlobal::displayInfo("# Transformation Changed Failed #");
-		}
-	}
+	float time = 5.0;
+	TCId = MTimerMessage::addTimerCallback(time, onTimeChanged, NULL, &r);
+
+	if (r == MS::kFailure)
+		MGlobal::displayInfo("# Time Callback Failed #");
 	
 	return res;
 }
@@ -95,7 +96,8 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 
 	MDGMessage::removeCallback(NACId);
 	MNodeMessage::removeCallback(NCCId);
-	MDagMessage::removeCallback(WMMCId);
+	MNodeMessage::removeCallback(ACCId);
+	MTimerMessage::removeCallback(TCId);
 
 	return MS::kSuccess;
 }
