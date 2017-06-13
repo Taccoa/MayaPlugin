@@ -2,53 +2,85 @@
 #include <iostream>
 
 using namespace std;
-MCallbackId NACId, NCCId, ACCId, TCId;
+MCallbackIdArray callbackIds;
 
-void onNodeCreated(MObject& node, void* clientData)
-{
-	MString nodeName;
-	MString string;
-	if (node.hasFn(MFn::kTransform)) {
-		MFnTransform trans(node);
-		nodeName = trans.name();
-		string = "# A Node has been Created named " + nodeName + " #";
-	}
-	else {
-		MFnMesh mesh(node);
-		nodeName = mesh.name();
-		string = "# A Node has been Created named " + nodeName + " #";
-	}
-	MGlobal::displayInfo(string);
-}
+float time = 0;
 
 void onNameChanged(MObject &node, const MString &str, void *clientData)
 {
-	MString newName;
 	MString string;
-	if (node.hasFn(MFn::kTransform)) {
-		MFnTransform trans(node);
-		newName = trans.name();
-		string = "# A Node has Changed Name from " + str + " to " + newName + " #";
-	}
-	if (node.hasFn(MFn::kMesh)) {
-		MFnMesh mesh(node);
-		newName = mesh.name();
-		string = "# A Node has Changed Name from " + str + " to " + newName + " #";
-	}
+	string = "# A Node has Changed Name from " + str + " to " + MFnDagNode(node).name() + " #";
 	MGlobal::displayInfo(string);
 }
 
-void onTransformationNodeChanged(MNodeMessage::AttributeMessage msg, MPlug &plug1, MPlug &plug2, void *clientData)
+void onTransformationNodeChanged(MObject& transformNode, MDagMessage::MatrixModifiedFlags& modified, void* clientData)
 {
-	MString string = "# " + plug1.name() + " Transformation has Changed #";
-	MGlobal::displayInfo(string);
+		MString string = "# " + MFnTransform(transformNode).name() + " Transformation has Changed #";
+		MGlobal::displayInfo(string);
 }
 
 void onTimeChanged(float elapsedTime, float lastTime, void *clientData)
 {
 	MString string = "# Time : ";
 	MString string2 = " #";
-	MGlobal::displayInfo(string + elapsedTime + string2);
+	time += elapsedTime;
+	MGlobal::displayInfo(string + time + string2);
+}
+
+void onVertexMoved(MNodeMessage::AttributeMessage msg, MPlug &plug1, MPlug &plug2, void*clientData)
+{
+	if (msg & MNodeMessage::kAttributeSet && !plug1.isArray() && plug1.isElement())
+	{
+		MString string;
+		float x = plug1.child(0).asFloat();
+		float y = plug1.child(1).asFloat();
+		float z = plug1.child(2).asFloat();
+		string = "# " + plug1.name() + " has changed attributes to " + x + ", " + y + ", " + z + ", " + " #";
+		MGlobal::displayInfo(string);
+	}
+}
+
+void onNodeCreated(MObject& node, void* clientData)
+{
+	MString string;
+	if (node.hasFn(MFn::kTransform)) {
+		string = "# A Node has been Created named " + MFnTransform(node).name() + " #";
+		MGlobal::displayInfo(string);
+		MStatus r = MS::kSuccess;
+		MFnTransform transform = node;
+		MDagPath meshDag = MDagPath::getAPathTo(transform.child(0));
+		MCallbackId newId = MDagMessage::addWorldMatrixModifiedCallback(meshDag, onTransformationNodeChanged, NULL, &r);
+		if (r == MS::kSuccess)
+		{
+			if (callbackIds.append(newId) == MS::kSuccess)
+			{
+				MGlobal::displayInfo("# Transform Changed Succeeded #");
+			}
+			else
+				MGlobal::displayInfo("# Name Changed Callback Failed #");
+		}
+		newId = MNodeMessage::addNameChangedCallback(transform.child(0), onNameChanged, NULL, &r);
+		if (r == MS::kSuccess)
+		{
+			if (callbackIds.append(newId) == MS::kSuccess)
+			{
+				MGlobal::displayInfo("# Name Changed Succeeded #");
+			}
+			else
+				MGlobal::displayInfo("# Name Changed Callback Failed #");
+		}
+		if (transform.child(0).hasFn(MFn::kMesh))
+		{
+			newId = MNodeMessage::addAttributeChangedCallback(transform.child(0), onVertexMoved, NULL, &r);
+			if (r == MS::kSuccess)
+			{
+				if (callbackIds.append(newId) == MS::kSuccess)
+					MGlobal::displayInfo("# Vertex Moved Succeeded #");
+			}
+			else
+				MGlobal::displayInfo("# Vertex Moved Callback Failed #");
+		}
+	}
 }
 
 EXPORT MStatus initializePlugin(MObject obj)
@@ -64,26 +96,69 @@ EXPORT MStatus initializePlugin(MObject obj)
 
 	MStatus r = MS::kSuccess;
 
-	NACId = MDGMessage::addNodeAddedCallback(onNodeCreated, "dependNode", NULL, &r);
-
-	if(r==MS::kFailure)
+	//Node Created
+	MCallbackId newId = MDGMessage::addNodeAddedCallback(onNodeCreated, kDefaultNodeType, NULL, &r);
+	
+	if (r == MS::kSuccess)
+	{
+		if(callbackIds.append(newId) == MS::kSuccess)
+			MGlobal::displayInfo("# Node Added Succeeded #");
+	}
+	else
 		MGlobal::displayInfo("# Node Added Callback Failed #");
 
-	NCCId = MNodeMessage::addNameChangedCallback(MObject::kNullObj, onNameChanged, NULL, &r);
+	//Timer
+	newId = MTimerMessage::addTimerCallback(5, onTimeChanged, NULL, &r);
 
-	if (r == MS::kFailure)
-		MGlobal::displayInfo("# Name Changed Callback Failed #");
+	if (r == MS::kSuccess)
+	{
+		if (callbackIds.append(newId) == MS::kSuccess)
+			MGlobal::displayInfo("# Timer Succeeded #");
+	}
+	else
+		MGlobal::displayInfo("# Timer Callback Failed #");
 
-	ACCId = MNodeMessage::addAttributeChangedCallback(obj, onTransformationNodeChanged, NULL, &r);
+	//Node Name Changed, Transformation and Vertex moved
+	MItDag meshIt(MItDag::kBreadthFirst, MFn::kTransform, &res);
+	for (; !meshIt.isDone(); meshIt.next())
+	{
+		MFnTransform transform = meshIt.currentItem();
+		if (transform.child(0).hasFn(MFn::kCamera) || transform.child(0).hasFn(MFn::kMesh))
+		{
+			MDagPath meshDag = MDagPath::getAPathTo(transform.child(0));
+			MCallbackId newId = MNodeMessage::addNameChangedCallback(transform.child(0), onNameChanged, NULL, &r);
 
-	if (r == MS::kFailure)
-		MGlobal::displayInfo("# Transformation Changed Failed #");
+			if (r == MS::kSuccess)
+			{
+				if (callbackIds.append(newId) == MS::kSuccess)
+					MGlobal::displayInfo("# Name Changed Succeeded #");
+			}
+			else
+				MGlobal::displayInfo("# Name Changed Callback Failed #");
 
-	float time = 5.0;
-	TCId = MTimerMessage::addTimerCallback(time, onTimeChanged, NULL, &r);
+			newId = MDagMessage::addWorldMatrixModifiedCallback(meshDag, onTransformationNodeChanged, NULL, &r);
 
-	if (r == MS::kFailure)
-		MGlobal::displayInfo("# Time Callback Failed #");
+			if (r == MS::kSuccess)
+			{
+				if (callbackIds.append(newId) == MS::kSuccess)
+					MGlobal::displayInfo("# Transform Changed Succeeded #");
+			}
+			else
+				MGlobal::displayInfo("# Transform Changed Callback Failed #");
+		}
+		if (transform.child(0).hasFn(MFn::kMesh))
+		{
+			MCallbackId newId = MNodeMessage::addAttributeChangedCallback(transform.child(0), onVertexMoved, NULL, &r);
+
+			if (r == MS::kSuccess)
+			{
+				if (callbackIds.append(newId) == MS::kSuccess)
+					MGlobal::displayInfo("# Vertex Moved Succeeded #");
+			}
+			else
+				MGlobal::displayInfo("# Vertex Moved Callback Failed #");
+		}
+	}
 	
 	return res;
 }
@@ -94,10 +169,7 @@ EXPORT MStatus uninitializePlugin(MObject obj)
 
 	MGlobal::displayInfo("Maya plugin unloaded!");
 
-	MDGMessage::removeCallback(NACId);
-	MNodeMessage::removeCallback(NCCId);
-	MNodeMessage::removeCallback(ACCId);
-	MTimerMessage::removeCallback(TCId);
+	MMessage::removeCallbacks(callbackIds);
 
 	return MS::kSuccess;
 }
